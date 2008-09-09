@@ -1,0 +1,13 @@
+#!/bin/sh
+
+######################################
+# QDE rc file. By Martin Ribelotta   #
+# Execute even QDEServer was started #
+######################################
+
+#/opt/qde/bin/qdesktop &>/dev/null &
+#/opt/qde/bin/qdesktop &>log &
+#/home/martin/proyectos/qtermwidget/consoleq &>/dev/null &
+
+# /opt/qde/bin/qdm
+exec sh $(dirname $0)/.qderc

@@ -1,0 +1,2 @@
+QDEPREFIX = $$(QDEPREFIX)
+isEmpty($$QDEPREFIX): QDEPREFIX="/opt/qde"

@@ -1,0 +1,9 @@
+#/bin/sh
+
+if [[ -d $HOME/Settings/qde ]]; then
+	/bin/true;
+else
+	cp -fR /opt/qde/Settings/qde $HOME/Settings/qde;
+fi
+
+exec /opt/qde/bin/qdesktop
