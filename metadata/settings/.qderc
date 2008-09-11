@@ -6,4 +6,4 @@ else
 	cp -fR /opt/qde/Settings/qde $HOME/Settings/qde;
 fi
 
-exec /opt/qde/bin/qdesktop
+exec /opt/qde/bin/qdesktop &>/dev/null

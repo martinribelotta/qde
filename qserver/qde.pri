@@ -1,2 +1,2 @@
-QDEPREFIX = $$(QDEPREFIX)
-isEmpty($$QDEPREFIX): QDEPREFIX="/opt/qde"
+QDEPREFIX = $$(QDE_PREFIX)
+isEmpty( QDEPREFIX ):QDEPREFIX = /opt/qde

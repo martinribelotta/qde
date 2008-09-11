@@ -24,8 +24,11 @@ QDEsktop::QDEsktop(): QWidget( QApplication::desktop() ) {
 	loadMoqoids();
 }
 
+void QDEsktop::showEvent( QShowEvent* /*e*/ ) {
+	lower();
+}
+
 void QDEsktop::paintEvent( QPaintEvent *e ) {
-	//lower();
 	QPainter p( this );
 	foreach( QRect r, e->region().rects() )
 		p.drawPixmap( r.topLeft(), background, r );

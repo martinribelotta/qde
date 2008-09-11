@@ -21,6 +21,7 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QTabWidget>
+#include <QLineEdit>
 
 #include <QListWidget>
 #include <QListWidgetItem>
@@ -29,11 +30,18 @@
 #include <QFileInfo>
 #include <QProcess>
 
+#include <QCache>
+
 #include <QtDebug>
 
 #include "../include/plugins.h"
 
-//#define EXEC_ON_DCLICK
+#define QDE_BASEDIR QString(QApplication::applicationDirPath()+"/../")
+#define DEFAULT_META_ICON QDE_BASEDIR+"/share/icons/mimetypes/unknown.png"
+#define DEFAULT_META_TEXT "..."
+#define DEFAULT_META_EXEC "/bin/true"
+#define DEFAULT_META_TOOLTIP "Unknow"
+#define DEFAULT_CATEGORY_ICON QDE_BASEDIR+"/share/icons/filesystems/folder.png"
 
 static QRect adjustToDesktop( const QRect& r ) {
 	QRect desk = QApplication::desktop()->availableGeometry();
@@ -49,30 +57,15 @@ static QRect adjustToDesktop( const QRect& r ) {
 	return ret.normalized();
 }
 
-class QDeskMetaInfo {
-	QSettings sets;
-#define DEFAULT_META_ICON "/opt/qde/share/icons/mimetypes/unknown.png"
-#define DEFAULT_META_TEXT "..."
-#define DEFAULT_META_EXEC "/bin/true"
-#define DEFAULT_META_TOOLTIP "Unknow"
-public:
-	QDeskMetaInfo( const QString& filename ):
-		sets( filename, QSettings::IniFormat ) { sets.beginGroup( "Menu" ); }
-	QIcon icon() {
-		return QIcon( sets.value( "icon", DEFAULT_META_ICON ).toString() );
+struct Category {
+	QList<QListWidgetItem*> itemList;
+	QListWidgetItem *categoryItem;
+
+	Category() {
+		categoryItem = 0l;
 	}
-	QString text() {
-		return sets.value( "text", DEFAULT_META_TEXT ).toString();
-	}
-	QString exec() {
-		return sets.value( "exec", DEFAULT_META_EXEC ).toString();
-	}
-	QString tooltip() {
-		return sets.value( "tooltip", DEFAULT_META_TOOLTIP ).toString();
-	}
-	QVariant value( const QString& key, const QVariant& defaultValue ) {
-		return sets.value( key, defaultValue );
-	}
+
+	bool isValid() { return categoryItem!=0l; }
 };
 
 class QurumiMenu: public QWidget {
@@ -83,8 +76,10 @@ public:
 		makeGui();
 		resize( sizeHint() );
 		loadConfiguration();
+		loadCommandHistory();
 	}
 	~QurumiMenu() {
+		saveCommandHistory();
 	}
 protected:
 	void paintEvent( QPaintEvent* ) {
@@ -92,6 +87,7 @@ protected:
 		p.setPen( Qt::black );
 		p.drawRect( QRect(0,0,width()-1,height()-1) );
 	}
+
 	void makeGui() {
 		QVBoxLayout *vLayout1;
 		QHBoxLayout *hLayout0;
@@ -111,36 +107,39 @@ protected:
 		launchEditor->setEditable(true);
 		hLayout0->addWidget(launchEditor);
 
+		connect(launchEditor->lineEdit(), SIGNAL(returnPressed()),
+			this, SLOT(executeCommand()) );
+
 		launchButton = new QToolButton(this);
 		hLayout0->addWidget(launchButton);
 
 		vLayout1->addLayout(hLayout0);
 
 		QWidget *appWidget = new QWidget( this );
-		categoryViewer = new QListWidget( appWidget ); //this);
+		categoryViewer = new QListWidget( appWidget );
+
 		connect(categoryViewer, SIGNAL(currentItemChanged(QListWidgetItem*,QListWidgetItem*)),
 			this, SLOT(categoryChange(QListWidgetItem*,QListWidgetItem*)) );
-		itemsViewer = new QListWidget( appWidget ); //this);
-#ifdef EXEC_ON_DCLICK
-		connect(itemsViewer, SIGNAL(itemActivated(QListWidgetItem*)),
-			this, SLOT(executeItem(QListWidgetItem*)) );
-#else
+
+		itemsViewer = new QListWidget( appWidget );
+
 		connect(itemsViewer, SIGNAL(itemClicked(QListWidgetItem*)),
 			this, SLOT(executeItem(QListWidgetItem*)) );
-#endif
+
 		hLayout2 = new QHBoxLayout( appWidget );
 		hLayout2->setContentsMargins( 0,0,0,0 );
 		hLayout2->addWidget(categoryViewer);
 		hLayout2->addWidget(itemsViewer);
 
 		favoritesViewer = new QListWidget( this );
+
 		connect(favoritesViewer, SIGNAL(itemClicked(QListWidgetItem*)),
 			this, SLOT(executeItem(QListWidgetItem*)) );
 
 		tab = new QTabWidget( this );
 		tab->setIconSize( QSize(32,32) );
-		tab->addTab( favoritesViewer, QIcon( "/opt/qde/share/icons/misc.png" ), tr( "Favorites" ) );
-		tab->addTab( appWidget, QIcon( "/opt/qde/share/icons/tools.png" ), tr( "Applications" ) );
+		tab->addTab( favoritesViewer, QIcon( QDE_BASEDIR+"/share/icons/misc.png" ), tr( "Favorites" ) );
+		tab->addTab( appWidget, QIcon( QDE_BASEDIR+"/share/icons/tools.png" ), tr( "Applications" ) );
 
 		tab->setTabPosition( QTabWidget::South );
 
@@ -163,17 +162,17 @@ protected:
 		
 		buttonRestart->setText(tr( "Restart" ));
 		buttonRestart->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
-		buttonRestart->setIcon(QIcon("/opt/qde/share/icons/restart.png"));
+		buttonRestart->setIcon(QIcon(QDE_BASEDIR+"/share/icons/restart.png"));
 		buttonRestart->setIconSize( QSize(32,32) );
 
 		buttonShutdown->setText(tr( "Shutdown" ));
 		buttonShutdown->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
-		buttonShutdown->setIcon(QIcon("/opt/qde/share/icons/shutdown.png"));
+		buttonShutdown->setIcon(QIcon(QDE_BASEDIR+"/share/icons/shutdown.png"));
 		buttonShutdown->setIconSize( QSize(32,32) );
 
 		buttonLogout->setText(tr( "Logout" ));
 		buttonLogout->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
-		buttonLogout->setIcon(QIcon("/opt/qde/share/icons/stop.png"));
+		buttonLogout->setIcon(QIcon(QDE_BASEDIR+"/share/icons/stop.png"));
 		buttonLogout->setIconSize( QSize(32,32) );
 
 		connect(buttonRestart,SIGNAL(clicked()),
@@ -186,84 +185,126 @@ protected:
 			this, SLOT(executeCommand()) );
 	}
 
-	QListWidgetItem *makeItem( const QString& item, QSettings& sets ) {
-		sets.beginGroup( item );
-		QListWidgetItem *newItem = new QListWidgetItem(
-			QIcon( sets.value( "icon", DEFAULT_META_ICON ).toString() ),
-			sets.value( "text", DEFAULT_META_TEXT ).toString()
-		);
-		newItem->setData( Qt::UserRole, 
-			sets.value( "exec", DEFAULT_META_EXEC ).toString() );
-		sets.endGroup();
-		return newItem;
+	QIcon cached( const QString& filename ) {
+		if ( !iconCache.contains( filename ) )
+			iconCache.insert( filename, new QIcon( filename ) );
+		return *iconCache[filename];
+		//return QIcon( filename );
 	}
 
-	QList<QListWidgetItem*> getCategoryItems( const QString& category, QSettings& sets ) {
-		QList<QListWidgetItem*> currentCategoryList;
-		sets.beginGroup( category );
-		foreach( QString item, sets.childGroups() )
-			currentCategoryList.append( makeItem( item, sets ) );
-		sets.endGroup();
-		return currentCategoryList;
+	static const QString commandHistoryFilename() {
+		QSettings sets( "qde", "qurumi_history" );
+		return sets.fileName();
 	}
 
 	void loadConfiguration() {
-		QSettings sets( "qde", "qurumi_menu" );
-		menuItemsList.clear();
-		int rowId = 0;
-		foreach( QString category, sets.childGroups() ) {
-			QList<QListWidgetItem*> itemList = getCategoryItems( category, sets );
-			if ( category == "favorites" ) {
-				favoritesViewer->clear();
-				foreach( QListWidgetItem *item, itemList )
-					favoritesViewer->addItem( item );
+		QStringList qdeskPath = QSettings( "qde", "qurumi_menu" )
+			.value( "qdeskpath", QDE_BASEDIR+"/share/menu" ).toString().split(":");
+		foreach( QString path, qdeskPath ) {
+			QDir dir( path );
+			foreach( QFileInfo entry, dir.entryInfoList( QStringList("*.qdesk"), QDir::Files ) )
+				loadConfigurationFrom( entry.absoluteFilePath() );
+		}
+	}
+
+	void loadConfigurationFrom( const QString& filename ) {
+		QSettings qdesk( filename, QSettings::IniFormat );
+		QStringList categoryNameList = qdesk.value( "category", "unknow" ).toString().split(":");
+		foreach( QString categoryName, categoryNameList ) {
+			QListWidgetItem *item = createItem( qdesk );
+			if ( categoryName == "favorites" ) {
+				favoritesViewer->addItem( item );
 			} else {
-				QListWidgetItem *newCategory = new QListWidgetItem( categoryViewer );
-				newCategory->setIcon( QIcon( "/opt/qde/share/icons/filesystems/folder.png" ) );
-				newCategory->setText( category );
-				newCategory->setData( Qt::UserRole, rowId++ );
-				menuItemsList.append( itemList );
+				Category& category = findOrNewCategory( categoryName );
+				category.itemList.append( item );
 			}
 		}
 	}
+
+	QListWidgetItem* createItem( QSettings& qdesk ) {
+		QString text = qdesk.value( "text", DEFAULT_META_TEXT ).toString();
+		QIcon icon( qdesk.value( "icon", DEFAULT_META_ICON ).toString() );
+		QString exec = qdesk.value( "exec", DEFAULT_META_EXEC ).toString();
+		QListWidgetItem *item = new QListWidgetItem( icon, text );
+		item->setData( Qt::UserRole, QVariant(exec) );
+		return item;
+	}
+
+	Category& findOrNewCategory( const QString& categoryName ) {
+		Category &categoryEntry = categoryList[ categoryName ];
+		if ( !categoryEntry.isValid() )
+			categoryEntry.categoryItem = new QListWidgetItem(
+				cached(DEFAULT_CATEGORY_ICON),
+				categoryName,
+				categoryViewer );
+		return categoryEntry;
+	}
+
+public slots:
+	void loadCommandHistory() {
+		QFile file( commandHistoryFilename() );
+		if ( file.open( QFile::ReadOnly ) ) {
+			while ( !file.atEnd() )
+				launchEditor->addItem(
+					QString::fromLocal8Bit(file.readLine().replace( '\n', '\0' )) );
+		}
+	}
+
+	void saveCommandHistory() {
+		QFile file( commandHistoryFilename() );
+		if ( file.open( QFile::WriteOnly ) )
+			for( int i=0; i<launchEditor->count(); i++ ) {
+				QString cmd = launchEditor->itemText(i);
+				file.write( cmd.toLocal8Bit() );
+				file.write( "\n" );
+			}
+	}
+
 private slots:
 	void categoryChange( QListWidgetItem* curr, QListWidgetItem* /*prev*/ ) {
-		int row = curr->data( Qt::UserRole ).toInt();
-		const QList<QListWidgetItem*> &itemList = menuItemsList.at(row);
+		QString categoryName = curr->text();
+		QList<QListWidgetItem*> &itemList = categoryList[ categoryName ].itemList;
 		while ( itemsViewer->count() )
 			itemsViewer->takeItem(0);
 		foreach( QListWidgetItem* it, itemList )
 			itemsViewer->addItem( it );
 	}
+
 	void executeItem( QListWidgetItem* item ) {
 		QString executable = item->data( Qt::UserRole ).toString();
 		qDebug() << "Launching " << executable;
 		QProcess::startDetached( executable );
 		hide();
 	}
+
 	void executeCommand() {
-		QString command = launchEditor->currentText();
-		if ( !command.isEmpty() ) {
-			QProcess::startDetached( command );
-			if ( launchEditor->findText( command )==-1 )
-				launchEditor->addItem( command );
+		QString cmdLine = launchEditor->currentText();
+		if ( !cmdLine.isEmpty() ) {
+			QProcess::startDetached( cmdLine );
+			if ( launchEditor->findText( cmdLine )==-1 )
+				launchEditor->addItem( cmdLine );
 		}
 		hide();
 	}
+
 	void logout() {
 		QCopChannel::send( "org.qde.server", "quit" );
 		hide();
 	}
+
 	void restart() {
 		QCopChannel::send( "org.qde.qdm.system", "restart" );
 		hide();
 	}
+
 	void halt() {
 		QCopChannel::send( "org.qde.qdm.system", "halt" );
 		hide();
 	}
 private:
-	QList< QList<QListWidgetItem*> > menuItemsList;
+	QCache<const QString,QIcon> iconCache;
+	QHash<const QString,Category> categoryList;
+
 	QListWidget *categoryViewer;
 	QListWidget *itemsViewer;
 	QListWidget *favoritesViewer;
@@ -308,3 +349,5 @@ DECLARE_QDESKTOP_CREATOR() {
 }
 
 #include "qurumi_plug.moc"
+
+

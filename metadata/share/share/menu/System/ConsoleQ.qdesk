@@ -1,5 +1,0 @@
-[Menu]
-text=ConsoleQ
-icon=/opt/qde/share/icons/consoleq.png
-exec=/opt/qde/bin/consoleq
-tooltip=Console For QDE

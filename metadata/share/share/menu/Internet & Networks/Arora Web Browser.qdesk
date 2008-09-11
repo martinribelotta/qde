@@ -1,5 +1,0 @@
-[Menu]
-text=Arora Web Browser
-icon=/opt/qde/share/icons/www.png
-exec=/opt/qde/bin/arora
-tooltip=Light Web Browser basend on QtWebKit
