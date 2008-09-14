@@ -9,6 +9,8 @@
 
 #include <QtSvg>
 
+#include <QCopChannel>
+
 #include "desktop.h"
 #include "../plugins/include/plugins.h"
 
@@ -17,6 +19,13 @@ QDEsktop::QDEsktop(): QWidget( QApplication::desktop() ) {
 	setFixedSize( QApplication::desktop()->width(),
 		QApplication::desktop()->height() );
 	setWindowFlags( Qt::FramelessWindowHint );
+
+	connect(
+		new QCopChannel( "org.qde.qonfigurator.desktop" ),
+		SIGNAL(received(const QString&,const QByteArray&)),
+		this,
+		SLOT(reconfigure(const QString&,const QByteArray&))
+	);
 
 	setAttribute( Qt::WA_NoSystemBackground );
 	setAttribute( Qt::WA_OpaquePaintEvent );
@@ -34,6 +43,11 @@ void QDEsktop::paintEvent( QPaintEvent *e ) {
 		p.drawPixmap( r.topLeft(), background, r );
 }
 
+void QDEsktop::reconfigure( const QString& /*message*/, const QByteArray& /*data*/ ) {
+	loadBackground();
+	update();
+}
+
 /**
  * It is a mokooooo!!!! It's roto mal!!!!
  */
@@ -49,6 +63,12 @@ void QDEsktop::loadBackground() {
 	background.fill( backgroundColor );
 	if ( !backgroundFile.isEmpty() ) {
 		QPainter p( &background );
+		p.setRenderHints(
+			QPainter::Antialiasing|
+			QPainter::SmoothPixmapTransform|
+			QPainter::TextAntialiasing,
+			true
+		);
 		if ( QFileInfo( backgroundFile ).suffix().toLower() == ".svg" )
 			QSvgRenderer( backgroundFile ).render( &p, deskRect );
 		else

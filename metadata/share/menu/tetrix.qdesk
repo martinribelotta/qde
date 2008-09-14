@@ -1,0 +1,4 @@
+[General]
+category=Games
+exec=/opt/QTopia/examples/widgets/tetrix/tetrix
+text=Tetrix

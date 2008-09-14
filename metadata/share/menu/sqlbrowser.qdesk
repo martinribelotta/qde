@@ -1,0 +1,4 @@
+[General]
+category=Text Utilities
+exec=/opt/QTopia/demos/sqlbrowser/sqlbrowser
+text=SQL Browser

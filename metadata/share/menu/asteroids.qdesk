@@ -1,0 +1,4 @@
+[General]
+category=Games
+exec=/opt/QTopia/examples/graphicsview/portedasteroids/portedasteroids
+text=Qt Asteroids

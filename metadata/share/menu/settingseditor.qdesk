@@ -1,0 +1,4 @@
+[General]
+category=System Tools
+exec=/opt/QTopia/examples/tools/settingseditor/settingseditor
+text=Settings Editor

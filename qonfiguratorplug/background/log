@@ -1,0 +1,4 @@
+QColor::setNamedColor: Unknown color name 'none'
+on buttonApply clicked 
+on buttonAddNewWappaper clicked 
+on buttonSetFillColor clicked 

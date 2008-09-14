@@ -1,0 +1,4 @@
+[General]
+category=Games
+exec=/opt/QTopia/examples/widgets/scribble/scribble
+text=Scribble

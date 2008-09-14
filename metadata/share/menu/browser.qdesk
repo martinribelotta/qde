@@ -1,0 +1,5 @@
+[General]
+category=Internet & networks
+exec=/opt/QTopia/demos/browser/browser
+icon=/opt/qde/share/icons/www.png
+text=Qt WebKit Demo Browser

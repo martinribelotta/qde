@@ -1,0 +1,4 @@
+[General]
+category=Text Utilities
+exec=/opt/QTopia/examples/mainwindows/mdi/mdi
+text=MDI Text Editor

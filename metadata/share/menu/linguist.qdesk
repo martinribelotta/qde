@@ -1,0 +1,4 @@
+[General]
+category=Programation
+exec=/opt/QTopia/bin/linguist
+text=Qt Linguist

@@ -1,0 +1,4 @@
+[General]
+category=Text Utilities
+exec=/opt/QTopia/demos/textedit/textedit
+text=HTML Text Editor

@@ -1,0 +1,4 @@
+[General]
+category=Text Utilities
+exec=/opt/QTopia/examples/itemviews/addressbook/addressbook
+text=Address Book

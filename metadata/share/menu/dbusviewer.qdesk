@@ -1,0 +1,4 @@
+[General]
+category=System Tools
+exec=/opt/QTopia/bin/qdbusviewer
+text=DBus System Viewer

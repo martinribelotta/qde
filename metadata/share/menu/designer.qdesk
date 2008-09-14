@@ -1,0 +1,4 @@
+[General]
+category=Programation:favorites
+exec=/opt/QTopia/bin/designer
+text=Qt Designer

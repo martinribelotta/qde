@@ -1,0 +1,5 @@
+[General]
+category=Internet & networks
+exec=/opt/QTopia/examples/network/http/http
+icon=/opt/qde/share/icons/mimetypes/netscape_doc.png
+text=HTTP Downloader

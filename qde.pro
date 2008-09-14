@@ -1,2 +1,2 @@
 TEMPLATE = subdirs
-SUBDIRS = qserver qdesktop qcopsender metadata
+SUBDIRS = qserver qdesktop qcopsender metadata qonfiguratorplug

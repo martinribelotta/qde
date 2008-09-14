@@ -1,0 +1,4 @@
+[General]
+category=Graphics:favorites
+exec=/opt/QTopia/examples/painting/svgviewer/svgviewer
+text=SVG Viewer

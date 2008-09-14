@@ -1,0 +1,4 @@
+[General]
+category=Utilities
+exec=/opt/QTopia/examples/widgets/digitalclock/digitalclock
+text=Digital Clock

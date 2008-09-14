@@ -1,0 +1,4 @@
+[General]
+category=Utilities:favorites
+exec=/opt/QTopia/examples/widgets/calculator/calculator
+text=Simple Calculator

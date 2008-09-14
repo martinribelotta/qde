@@ -1,0 +1,5 @@
+[General]
+category=Internet & networks:favorites
+exec=/opt/qde/bin/arora
+icon=/opt/qde/share/icons/www.png
+text=Arora Web Browser

@@ -1,0 +1,4 @@
+[General]
+category=Programation:favorites
+exec=/opt/QTopia/bin/assistant_adp
+text=New Qt Assistant

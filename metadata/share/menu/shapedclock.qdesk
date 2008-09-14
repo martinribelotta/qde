@@ -1,0 +1,4 @@
+[General]
+category=Utilities
+exec=/opt/QTopia/examples/widgets/shapedclock/shapedclock
+text=Shaped Clock

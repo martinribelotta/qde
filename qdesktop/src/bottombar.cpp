@@ -11,10 +11,13 @@
 #include <QBrush>
 #include <QHBoxLayout>
 #include <QLibrary>
+#include <QFile>
 
 #include <QtDebug>
 
 #include "../plugins/include/plugins.h"
+
+#define DEFAULT_PLUGINS_PATH (QApplication::applicationDirPath()+"/../plugins/")
 
 static void sendMaxWindowRect( const QRect& r ) {
 	QByteArray data;
@@ -23,12 +26,14 @@ static void sendMaxWindowRect( const QRect& r ) {
 	QCopChannel::send( "org.qde.server", "setMaxWindowRect", data );
 }
 
-static QWidget *loadPlugin( const QString& /*title*/, const QString& path ) {
+static QWidget *loadPlugin( const QString& path ) {
 	QString realPath( path );
 	if ( path.startsWith('/') )
 		realPath = path;
 	else if ( path.startsWith('*') )
-		realPath = QApplication::applicationDirPath()+"/"+path;
+		realPath = DEFAULT_PLUGINS_PATH+QString("lib%1.so").arg(path.mid(1));
+	else
+		realPath = DEFAULT_PLUGINS_PATH+path;
 
 	QuiquePluginLoader_t loader = (QuiquePluginLoader_t)QLibrary::resolve( realPath, QUIQUE_ENTRY_NAME );
 	if ( loader )
@@ -40,11 +45,67 @@ static QWidget *loadPlugin( const QString& /*title*/, const QString& path ) {
 
 BottomBar::BottomBar() {
 	setWindowFlags( Qt::FramelessWindowHint|Qt::WindowStaysOnTopHint );
+
+	layout = new QHBoxLayout(this);
+
+	connect(new QCopChannel("org.qde.qonfigurator.bottombar"),
+		SIGNAL(received(const QString&,const QByteArray&)),
+		this,
+		SLOT(reconfigure(const QString&,const QByteArray&))
+	);
+
+	loadConfig();
+	loadPlugins();
+}
+
+BottomBar::~BottomBar() {
+}
+
+void BottomBar::paintEvent( QPaintEvent* ) {
+	QLinearGradient grad( 0,0,0,height() );
+	QColor light = palette().color( QPalette::Button );
+	QColor dark = palette().color( QPalette::Dark );
+	grad.setColorAt( 0.0, light );
+	grad.setColorAt( 0.5, dark );
+	grad.setColorAt( 1.0, light );
+	QPainter p( this );
+	p.fillRect( QRect(0,0,width(),height()), QBrush( grad ) );
+}
+
+void BottomBar::clearPlugins() {
+	foreach( QWidget *w, pluginWidgets )
+		delete w;
+	pluginWidgets.clear();
+}
+
+void BottomBar::loadPlugins() {
+	qDebug() << "Loading plugins...";
+	QFile f( QSettings( "qde", "bottombar_plugins" ).fileName() );
+	if ( f.open( QFile::ReadOnly ) ) {
+		while ( !f.atEnd() ) {
+			QString line = QString(f.readLine()).replace( "\n", QString() );
+			if ( line.startsWith("#") || line.isEmpty() )
+				continue;
+			QWidget *w = loadPlugin( line );
+			if ( w ) {
+				w->setParent( this );
+				layout->addWidget(w);
+				pluginWidgets.append( w );
+				qDebug() << "Plugin " << line << " as been loaded";
+			} else
+				qDebug() << "FATAL: Can't create " << line << " plugin. Loader fail returning null.";
+		}
+	} else
+		qDebug() << "Can't open " << f.fileName();
+	qDebug() << "done.";
+}
+
+void BottomBar::loadConfig() {
+	qDebug() << "Loading configuration...";
 	QSettings sets( "qde", "desktop" );
 
 	sets.beginGroup( "bottombar" );
 
-	QHBoxLayout *layout = new QHBoxLayout(this);
 	layout->setContentsMargins(0,0,0,0);
 	layout->setSpacing( sets.value( "space", 1 ).toInt() );
 
@@ -55,43 +116,13 @@ BottomBar::BottomBar() {
 	move( r.bottomLeft()+QPoint(0,1) );
 
 	sets.endGroup();
-	sets.beginGroup( "plugins" );
-
-	QStringList keys = sets.childKeys();
-	keys.sort();
-	foreach( QString title, keys ) {
-		// Format is:
-		//   title=/absolute/path/to/plugin.so
-		// if start with '/', if start with '*', the path is relative to qdesktop binary
-		// In other case not try to determine path and use LD_LIBRARY_PATH etc.
-		QString key = sets.value( title ).toString();
-		QWidget *w = loadPlugin( title, key );
-		if ( w ) {
-			w->setParent( this );
-			layout->addWidget(w);
-			qDebug() << title << " as been loaded from " << key;
-		} else
-			qDebug() << "FATAL: Can't create plugin. Loader fail returning null";
-	}
-	sets.endGroup();
-
+	qDebug() << "done.";
 }
 
-BottomBar::~BottomBar() {
-}
-
-void BottomBar::paintEvent( QPaintEvent * /*e*/ ) {
-	static bool initGradient = true;
-	static QLinearGradient grad( 0,0,0,height() );
-	if ( initGradient ) {
-		QColor light = palette().color( QPalette::Button );
-		QColor dark = palette().color( QPalette::Dark );
-		grad.setColorAt( 0.0, light );
-		grad.setColorAt( 0.5, dark );
-		//grad.setColorAt( 0.5, light.darker( 180 ) );
-		grad.setColorAt( 1.0, light );
-		initGradient = false;
+void BottomBar::reconfigure( const QString& message, const QByteArray& ) {
+	if ( message == "reconfigure" ) {
+		loadConfig();
+		clearPlugins();
+		loadPlugins();
 	}
-	QPainter p( this );
-	p.fillRect( QRect(0,0,width(),height()), QBrush( grad ) );
 }

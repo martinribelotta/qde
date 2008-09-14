@@ -1,0 +1,4 @@
+[General]
+category=Utilities
+exec=/opt/QTopia/examples/dialogs/findfiles/findfiles
+text=Find Files

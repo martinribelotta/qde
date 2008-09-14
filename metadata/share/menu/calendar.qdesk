@@ -1,0 +1,4 @@
+[General]
+category=Text Utilities:Utilities
+exec=/opt/QTopia/examples/widgets/calendarwidget/calendarwidget
+text=Simple Calendar

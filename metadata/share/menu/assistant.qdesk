@@ -1,0 +1,4 @@
+[General]
+category=Programation
+exec=/opt/QTopia/bin/assistant
+text=Qt Assistant (old engine)

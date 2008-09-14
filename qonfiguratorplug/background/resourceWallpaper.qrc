@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="/" >
+    <file>desktop.svg</file>
+    <file>formWallpaper.ui</file>
+  </qresource>
+</RCC>

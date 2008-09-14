@@ -1,0 +1,4 @@
+[General]
+category=Text Utilities
+exec=/opt/QTopia/examples/mainwindows/sdi/sdi
+text=SDI Text Editor

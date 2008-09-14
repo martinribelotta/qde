@@ -1,0 +1,4 @@
+[General]
+category=System Tools:favorites
+exec=/opt/QTopia/bin/qtdemo
+text=Qt Demostrations

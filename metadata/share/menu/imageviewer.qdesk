@@ -1,0 +1,4 @@
+[General]
+category=Graphics
+exec=/opt/QTopia/examples/widgets/imageviewer/imageviewer
+text=Image Viewer

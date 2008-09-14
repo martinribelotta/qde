@@ -13,9 +13,12 @@ public:
 protected:
 	virtual void paintEvent( QPaintEvent *e );
 	virtual void showEvent( QShowEvent *e );
-private:
+public slots:
 	void loadBackground();
 	void loadMoqoids();
+private slots:
+	void reconfigure( const QString&, const QByteArray& );
+private:
 	QPixmap background;
 	QGridLayout *layout;
 };

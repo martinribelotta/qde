@@ -1,0 +1,4 @@
+[General]
+category=Utilities:favorites
+exec=/opt/QTopia/examples/desktop/screenshot/screenshot
+text=Take a Screenshot

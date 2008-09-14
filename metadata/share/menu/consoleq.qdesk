@@ -1,0 +1,5 @@
+[General]
+category=System Tools:favorites
+exec=/opt/qde/bin/consoleq
+icon=/opt/qde/share/icons/consoleq.png
+text=Terminal Emulator ConsoleQ

@@ -30,6 +30,10 @@
 #include <QFileInfo>
 #include <QProcess>
 
+#include <QTimer>
+
+#include <QHideEvent>
+
 #include <QCache>
 
 #include <QtDebug>
@@ -71,8 +75,13 @@ struct Category {
 class QurumiMenu: public QWidget {
 	Q_OBJECT
 public:
+	enum FadeDirection { FadeIn, FadeOut };
+
 	QurumiMenu() {
-		setWindowFlags( Qt::Popup );
+		setWindowFlags( Qt::Popup /*Qt::FramelessWindowHint*/ );
+		setWindowOpacity( 0.0 );
+		fadeTimer = new QTimer( this );
+		connect( fadeTimer, SIGNAL(timeout()), this, SLOT(fadeTimer_step()) );
 		makeGui();
 		resize( sizeHint() );
 		loadConfiguration();
@@ -81,6 +90,12 @@ public:
 	~QurumiMenu() {
 		saveCommandHistory();
 	}
+
+	virtual void doHide() {
+		direction = FadeOut;
+		fadeTimer->start(10);
+	}
+
 protected:
 	void paintEvent( QPaintEvent* ) {
 		QPainter p( this );
@@ -240,7 +255,59 @@ protected:
 		return categoryEntry;
 	}
 
+	virtual void showEvent( QShowEvent* /*e*/ ) {
+		if ( windowOpacity() == 0.0 ) {
+			direction = FadeIn;
+			fadeTimer->start(10);
+		}
+	}
+
+	virtual void mousePressEvent( QMouseEvent* event ) {
+		event->accept();
+		QWidget* w;
+		while ((w = qApp->activePopupWidget()) && w != this) {
+			w->close();
+			if (qApp->activePopupWidget() == w) // widget does not want to dissappear
+				w->hide(); // hide at least
+		}
+		if (!rect().contains(event->pos()))
+			doHide(); //close();
+	}
+
+	virtual void hideEvent( QHideEvent* /*e*/ ) {
+		setWindowOpacity(0.0);
+	}
+
 public slots:
+	void fadeTimer_step() {
+		double opacity = windowOpacity();
+		const double fadeStep = 0.18;
+		switch ( direction ) {
+			case FadeIn:
+				opacity += fadeStep;
+				if ( opacity > 1.0 ) {
+					opacity = 1.0;
+					fadeTimer->stop();
+				}
+			break;
+			case FadeOut:
+				opacity -= fadeStep;
+				if ( opacity < 0.0 ) {
+					opacity = 0.0;
+					fadeTimer->stop();
+					hide();
+				}
+			break;
+		}
+/*		if ( opacity < 1.0 ) {
+			opacity += 0.18;
+		} else {
+			fadeTimer->stop();
+			opacity = 1.0;
+		}*/
+		setWindowOpacity( opacity );
+	}
+
 	void loadCommandHistory() {
 		QFile file( commandHistoryFilename() );
 		if ( file.open( QFile::ReadOnly ) ) {
@@ -274,7 +341,7 @@ private slots:
 		QString executable = item->data( Qt::UserRole ).toString();
 		qDebug() << "Launching " << executable;
 		QProcess::startDetached( executable );
-		hide();
+		doHide();
 	}
 
 	void executeCommand() {
@@ -284,22 +351,22 @@ private slots:
 			if ( launchEditor->findText( cmdLine )==-1 )
 				launchEditor->addItem( cmdLine );
 		}
-		hide();
+		doHide();
 	}
 
 	void logout() {
 		QCopChannel::send( "org.qde.server", "quit" );
-		hide();
+		doHide();
 	}
 
 	void restart() {
 		QCopChannel::send( "org.qde.qdm.system", "restart" );
-		hide();
+		doHide();
 	}
 
 	void halt() {
 		QCopChannel::send( "org.qde.qdm.system", "halt" );
-		hide();
+		doHide();
 	}
 private:
 	QCache<const QString,QIcon> iconCache;
@@ -309,6 +376,9 @@ private:
 	QListWidget *itemsViewer;
 	QListWidget *favoritesViewer;
 	QComboBox *launchEditor;
+
+	QTimer *fadeTimer;
+	FadeDirection direction;
 };
 
 class Qurumi: public QObject {
@@ -336,7 +406,7 @@ private slots:
 		} else if ( message == "show" ) {
 			menu.show();
 		} else if ( message == "hide" ) {
-			menu.hide();
+			menu.doHide();
 		}
 	}
 private:
@@ -349,5 +419,3 @@ DECLARE_QDESKTOP_CREATOR() {
 }
 
 #include "qurumi_plug.moc"
-
-

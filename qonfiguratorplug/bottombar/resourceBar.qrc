@@ -1,0 +1,8 @@
+<RCC>
+  <qresource prefix="/" >
+    <file>formBar.ui</file>
+    <file>bar.svg</file>
+    <file>remove.svg</file>
+    <file>add.svg</file>
+  </qresource>
+</RCC>

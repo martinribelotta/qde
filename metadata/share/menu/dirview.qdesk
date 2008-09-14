@@ -1,0 +1,4 @@
+[General]
+category=Utilities
+exec=/opt/QTopia/examples/itemviews/dirview/dirview
+text=Directory Viewer
