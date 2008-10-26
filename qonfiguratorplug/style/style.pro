@@ -4,7 +4,7 @@ CONFIG += uitools plugin
 
 HEADERS = ../interface.h
 SOURCES = main.cpp
-RESOURCES = resourceBar.qrc
+RESOURCES = resourceStyle.qrc
 
 include(../qde.pri)
 

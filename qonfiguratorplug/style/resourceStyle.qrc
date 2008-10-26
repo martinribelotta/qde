@@ -1,0 +1,7 @@
+<RCC>
+  <qresource prefix="/" >
+    <file>style.svg</file>
+    <file>previewerWidget.ui</file>
+    <file>formStyle.ui</file>
+  </qresource>
+</RCC>

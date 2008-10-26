@@ -16,7 +16,11 @@
    <item>
     <layout class="QGridLayout" name="gridLayout" >
      <item rowspan="5" row="0" column="0" >
-      <widget class="QListWidget" name="wallpaperList" />
+      <widget class="QListWidget" name="wallpaperList" >
+       <property name="alternatingRowColors" >
+        <bool>true</bool>
+       </property>
+      </widget>
      </item>
      <item row="0" column="1" colspan="2" >
       <widget class="QToolButton" name="buttonAddNewWallpaper" >

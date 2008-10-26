@@ -5,19 +5,36 @@
 #include <QPainter>
 #include <QPaintEvent>
 #include <QLibrary>
-#include <QGridLayout>
 
 #include <QtSvg>
 
 #include <QCopChannel>
 
+#ifdef QDESKTOP_EXPERIMENTAL
+
+#include <QGraphicsScene>
+#include <QGraphicsProxyWidget>
+
+#warning QDESKTOP_EXPERIMENTAL is ***EXPERIMENTAL*** (look it?)
+
+#endif
+
 #include "desktop.h"
 #include "../plugins/include/plugins.h"
 
-QDEsktop::QDEsktop(): QWidget( QApplication::desktop() ) {
-	layout = new QGridLayout( this );
+QDEsktop::QDEsktop():
+#ifdef QDESKTOP_EXPERIMENTAL
+    QGraphicsView
+#else
+    QWidget
+#endif
+    ( QApplication::desktop() ) {
 	setFixedSize( QApplication::desktop()->width(),
 		QApplication::desktop()->height() );
+#ifdef QDESKTOP_EXPERIMENTAL
+	setScene( new QGraphicsScene( this ) );
+	scene()->setSceneRect( viewport()->geometry() );
+#endif
 	setWindowFlags( Qt::FramelessWindowHint );
 
 	connect(
@@ -37,10 +54,14 @@ void QDEsktop::showEvent( QShowEvent* /*e*/ ) {
 	lower();
 }
 
-void QDEsktop::paintEvent( QPaintEvent *e ) {
+void QDEsktop::paintEvent( QPaintEvent* e ) {
+#ifdef QDESKTOP_EXPERIMENTAL
+	QGraphicsView::paintEvent( e );
+#else
 	QPainter p( this );
 	foreach( QRect r, e->region().rects() )
 		p.drawPixmap( r.topLeft(), background, r );
+#endif
 }
 
 void QDEsktop::reconfigure( const QString& /*message*/, const QByteArray& /*data*/ ) {
@@ -48,9 +69,6 @@ void QDEsktop::reconfigure( const QString& /*message*/, const QByteArray& /*data
 	update();
 }
 
-/**
- * It is a mokooooo!!!! It's roto mal!!!!
- */
 void QDEsktop::loadBackground() {
 	QSettings sets( "qde", "desktop" );
 	sets.beginGroup( "background" );
@@ -59,7 +77,10 @@ void QDEsktop::loadBackground() {
 	QRect deskRect( 0, 0,
 		QApplication::desktop()->width(),
 		QApplication::desktop()->height() );
-	background= QPixmap( deskRect.size() );
+#ifdef QDESKTOP_EXPERIMENTAL
+	QPixmap
+#endif
+		background = QPixmap( deskRect.size() );
 	background.fill( backgroundColor );
 	if ( !backgroundFile.isEmpty() ) {
 		QPainter p( &background );
@@ -74,12 +95,18 @@ void QDEsktop::loadBackground() {
 		else
 			p.drawPixmap( deskRect, QPixmap( backgroundFile ) );
 	}
+#ifdef QDESKTOP_EXPERIMENTAL
+	setBackgroundBrush( background );
+#endif
 }
 
 static void msg( const QString& key, const QString& text ) {
 	qDebug() << "loadMoqoids FATAL [" << key << "]: " << text;
 }
 
+/**
+ * It is a mokooooo!!!! It's roto mal!!!!
+ */
 void QDEsktop::loadMoqoids() {
 	QSettings sets( "qde", "desktop" );
 	sets.beginGroup( "Moqoids" );
@@ -95,12 +122,22 @@ void QDEsktop::loadMoqoids() {
 			MoqoidPluginLoader_t loader = (MoqoidPluginLoader_t)
 				QLibrary::resolve( pluginPath, MOQOID_ENTRY_NAME );
 			if ( loader ) {
-				QWidget *w = loader( this );
+				QWidget *w = loader( 0l );
 				if ( w ) {
-					//w->setParent( this );
+#ifdef QDESKTOP_EXPERIMENTAL
+					QDialog *d = new QDialog;
+					d->setWindowTitle( key );
+					QHBoxLayout *l = new QHBoxLayout( d );
+					w->setParent( d );
+					l->addWidget( w );
+					scene()->addWidget( d, Qt::Window );
+					d->show();
+#else
+					w->setParent( this );
 					w->move( r.topLeft() );
 					w->setFixedSize( r.size() );
 					w->show();
+#endif
 				} else
 					msg( key, "Entry point function return null" );
 			} else

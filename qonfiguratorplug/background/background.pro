@@ -1,6 +1,6 @@
 TEMPLATE = lib
 
-CONFIG += uitools
+CONFIG += uitools plugin
 
 HEADERS = ../interface.h
 SOURCES = main.cpp

@@ -70,5 +70,6 @@ void QDEPluginLoader::loadAll()
 				msg(pluginName,"Can't find " QDESKTOP_ENTRY_NAME " into plugin file");
 		} else
 			msg(pluginName,"Can't find 'plugin' entry");
+		self->sets.endGroup();
 	}
 }

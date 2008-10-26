@@ -13,6 +13,7 @@
 #include <QtDebug>
 
 #include "../include/plugins.h"
+#include "../include/qwswindow.h"
 
 static QRect adjustToDesktop( const QRect& r ) {
 	QRect desk = QApplication::desktop()->availableGeometry();
@@ -27,6 +28,22 @@ static QRect adjustToDesktop( const QRect& r ) {
 		ret.moveRight( desk.right() );
 	return ret.normalized();
 }
+/*
+static void moveWindowTo( quint32 wid, int x, int y ) {
+	QByteArray data;
+	QDataStream stream( &data, QIODevice::WriteOnly );
+	stream << quint32(0) << wid << x << y;
+	QCopChannel::send( "org.qde.clients", "moveWindow", data );
+	//qDebug() << "Sendded:" << data << "(" << wid << x << y << ")";
+}
+
+static void positione( quint32 wid ) {
+	return;
+	static QPoint nextPoint = QPoint( 10, 10 );
+	moveWindowTo( wid, nextPoint.x(), nextPoint.y() );
+	nextPoint += QPoint( 16, 16 );
+}
+*/
 
 class WinListWidget: public QWidget {
 public:
@@ -99,15 +116,16 @@ private slots:
 		}
 	}
 
-	void addWindow( int wid, const QString& caption ) {
+	void addWindow( const QDEWindow& window ) {  //( int wid, const QString& caption ) {
 		QListWidgetItem *item;
+		int wid =int(window.winId);
 		if ( windowsMap.contains( wid ) )
 			item = windowsMap[ wid ];
 		else {
 			item = new QListWidgetItem( winListWidget.windowsList() );
 			windowsMap[ wid ] = item;
 		}
-		item->setText( caption );
+		item->setText( window.caption );
 		item->setData( Qt::UserRole, wid );
 		winListWidget.windowsList()->setCurrentItem( item );
 		winListWidget.resize( winListWidget.sizeHint() );
@@ -115,11 +133,16 @@ private slots:
 
 	void windowEvent( const QString& message, const QByteArray& data ) {
 		if ( message == "windowEvent" ) {
-			quint32 wid, ev, flags;
+			/*quint32 wid, ev, flags;
 			QString caption;
 			QDataStream stream( data );
 			stream >> wid >> ev >> flags >> caption;
-			int windowType = flags&Qt::WindowType_Mask;
+			int windowType = flags&Qt::WindowType_Mask;*/
+			QDataStream stream( data );
+			QByteArray windowData;
+			quint32 ev;
+			stream >> ev >> windowData;
+			QDEWindow window( windowData );
 			switch ( (QWSServer::WindowEvent)ev ) {
 				case QWSServer::Create:
 				case QWSServer::Active:
@@ -127,11 +150,18 @@ private slots:
 				case QWSServer::Show:
 				case QWSServer::Geometry:
 				case QWSServer::Name:
-					if ( !caption.isEmpty() )
+					if ( !window.caption.isEmpty() )
+						addWindow( window );
+					/*if ( !caption.isEmpty() ) {
 						addWindow( wid, caption );
+						if ( (QWSServer::WindowEvent)ev == QWSServer::Name )
+							positione( wid );
+						//moveWindowTo( wid, 100, 100 );
+					}*/
 				break;
 				case QWSServer::Destroy:
-					delWindow( wid );
+					//delWindow( wid );
+					delWindow( window.winId );
 				break;
 				case QWSServer::Hide:
 				case QWSServer::Lower:

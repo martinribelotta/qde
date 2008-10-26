@@ -1,32 +1,8 @@
-/****************************************************************************
-**
-** Copyright (C) 2006 Trolltech AS. All rights reserved.
-**
-** This file is part of the documentation of Qt. It was originally
-** published as part of Qt Quarterly.
-**
-** This file may be used under the terms of the GNU General Public License
-** version 2.0 as published by the Free Software Foundation or under the
-** terms of the Qt Commercial License Agreement. The respective license
-** texts for these are provided with the open source and commercial
-** editions of Qt.
-**
-** If you are unsure which license is appropriate for your use, please
-** review the following information:
-** http://www.trolltech.com/products/qt/licensing.html or contact the
-** sales department at sales@trolltech.com.
-**
-** This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-** WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
-**
-****************************************************************************/
-
 #include <QtGui>
 
 #include <QtDebug>
 
 #include "configdialog.h"
-//#include "pages.h"
 
 #include "../../qonfiguratorplug/interface.h"
 
@@ -43,13 +19,8 @@ ConfigDialog::ConfigDialog()
 
     pagesWidget = new QStackedWidget;
 
-    /*pagesWidget->addWidget(new ConfigurationPage);
-    pagesWidget->addWidget(new UpdatePage);
-    pagesWidget->addWidget(new QueryPage);*/
-
     QPushButton *closeButton = new QPushButton(tr("Close"));
 
-    //createIcons();
     loadPlugins();
 
     contentsWidget->setCurrentRow(0);
@@ -67,7 +38,6 @@ ConfigDialog::ConfigDialog()
 
     QVBoxLayout *mainLayout = new QVBoxLayout;
     mainLayout->addLayout(horizontalLayout);
-    //mainLayout->addStretch(1);
     mainLayout->addSpacing(12);
     mainLayout->addLayout(buttonsLayout);
     setLayout(mainLayout);
@@ -83,27 +53,8 @@ void ConfigDialog::fadeInWidget(int index)
     faderWidget->start();
 }
 
-//void ConfigDialog::createIcons()
 void ConfigDialog::loadPlugins()
 {
-    /*QListWidgetItem *configButton = new QListWidgetItem(contentsWidget);
-    configButton->setIcon(QIcon(":/images/config.png"));
-    configButton->setText(tr("Configuration"));
-    configButton->setTextAlignment(Qt::AlignHCenter);
-    configButton->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
-
-    QListWidgetItem *updateButton = new QListWidgetItem(contentsWidget);
-    updateButton->setIcon(QIcon(":/images/update.png"));
-    updateButton->setText(tr("Update"));
-    updateButton->setTextAlignment(Qt::AlignHCenter);
-    updateButton->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
-
-    QListWidgetItem *queryButton = new QListWidgetItem(contentsWidget);
-    queryButton->setIcon(QIcon(":/images/query.png"));
-    queryButton->setText(tr("Query"));
-    queryButton->setTextAlignment(Qt::AlignHCenter);
-    queryButton->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);*/
-
     QStringList pluginsPaths = QSettings( "qde", "qonfigurator" )
         .value( "pluginspath", DEFAULT_QONFIGURATOR_PLUGIN_DIR )
         .toString().split( ":" );
@@ -113,7 +64,6 @@ void ConfigDialog::loadPlugins()
             QLibrary lib( pluginFile.absoluteFilePath() );
             QOnfiguratorPlugin_entry entry = (QOnfiguratorPlugin_entry)
                 lib.resolve( QONFIGURATOR_PLUGIN_ENTRY_NAME );
-                //QLibrary::resolve( pluginFile.absoluteFilePath(), QONFIGURATOR_PLUGIN_ENTRY_NAME );
             if ( entry ) {
                 QOnfiguratorPlugin_data data = entry();
                 QListWidgetItem *itemEntry = new QListWidgetItem(contentsWidget);

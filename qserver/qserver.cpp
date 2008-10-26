@@ -12,12 +12,34 @@
 
 #include "qserver.h"
 
+#include "../qdesktop/plugins/include/qwswindow.h"
+
 static inline QWSWindow *findWindow( int wid ) {
 	foreach( QWSWindow* w, QWSServer::instance()->clientWindows() )
 		if ( w->winId() == wid )
 			return w;
 	return 0l;
 }
+
+static inline void sendWindowEvent( QWSWindow *window, QWSServer::WindowEvent event ) {
+	QByteArray data;
+	QDataStream stream( &data, QIODevice::WriteOnly );
+	stream << quint32(event) << QDEWindow(window).toData();
+	QCopChannel::send( "org.qde.server.wm", "windowEvent", data );
+}
+
+class QDEKeyboardFilter: public QWSServer::KeyboardFilter {
+public:
+	virtual bool filter( int unicode, int keycode, int modifiers, bool isPress, bool autoRepeat ) {
+		QByteArray data;
+		QDataStream stream( &data, QIODevice::WriteOnly );
+		int isPress_int = isPress;
+		int autoRepeat_int = autoRepeat;
+		stream << unicode << keycode << modifiers << isPress_int << autoRepeat_int;
+		QCopChannel::send( "org.qde.qserver.events", "keyevent", data );
+		return false;
+	}
+};
 
 class QDEServerPrivate: public QObject {
     Q_OBJECT
@@ -34,6 +56,7 @@ public:
 	    this, SLOT(windowEvent(QWSWindow*,QWSServer::WindowEvent)) );
 
 	executeRcFile();
+	QWSServer::addKeyboardFilter( new QDEKeyboardFilter() );
     }
 
     ~QDEServerPrivate() {
@@ -65,7 +88,8 @@ private slots:
     }
 
     void windowEvent( QWSWindow *window, QWSServer::WindowEvent event ) {
-	QByteArray data;
+	sendWindowEvent( window, event );
+	/*QByteArray data;
 	QDataStream stream( &data, QIODevice::WriteOnly );
 	quint32 id = window->winId();
 	quint32 ev = (quint32)event;
@@ -73,8 +97,9 @@ private slots:
 	//QRect r = window->paintedRegion().boundingRect();
 	QString caption = window->caption();
 	stream << id << ev << flags << caption; // << r;
-	QCopChannel::send( "org.qde.server.wm", "windowEvent", data );
+	QCopChannel::send( "org.qde.server.wm", "windowEvent", data );*/
     }
+
 public slots:
     void quitFromQDE() {
 	int ret = QMessageBox::question( 0l,
@@ -105,11 +130,21 @@ private:
     QProcess *rcProc;
 };
 
+static QString oldStyle;
+
 QDEServer::QDEServer() {
     d = new QDEServerPrivate();
+    QSettings sets( "Trolltech" );
+    sets.beginGroup( "Qt" );
+    oldStyle = sets.value( "style", QString() ).toString();
+    sets.setValue( "style", "qdestyle" );
+    QApplication::setStyle( "qdestyle" );
 }
 
 QDEServer::~QDEServer() {
+    QSettings sets( "", "Trolltech" );
+    sets.beginGroup( "Qt" );
+    sets.setValue( "style", oldStyle );
     delete d;
 }
 

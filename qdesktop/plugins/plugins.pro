@@ -5,7 +5,9 @@ SUBDIRS = dummy_plug \
 	quitb_plug \
 	qurumi_plug \
 	spacer_plug \
-	winlist_plug
+	winlist_plug \
+	qutre_plug \
+	levesque_plug
 
 #	It's roto mal!
 #	moqoidsample_plug

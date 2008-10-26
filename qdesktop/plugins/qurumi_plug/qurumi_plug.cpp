@@ -23,8 +23,8 @@
 #include <QTabWidget>
 #include <QLineEdit>
 
-#include <QListWidget>
-#include <QListWidgetItem>
+#include <QStandardItem>
+#include <QStandardItemModel>
 
 #include <QDir>
 #include <QFileInfo>
@@ -41,11 +41,13 @@
 #include "../include/plugins.h"
 
 #define QDE_BASEDIR QString(QApplication::applicationDirPath()+"/../")
-#define DEFAULT_META_ICON QDE_BASEDIR+"/share/icons/mimetypes/unknown.png"
+#define DEFAULT_META_ICON QDE_BASEDIR+"/share/icons/filesystems/exec.png"
 #define DEFAULT_META_TEXT "..."
 #define DEFAULT_META_EXEC "/bin/true"
 #define DEFAULT_META_TOOLTIP "Unknow"
 #define DEFAULT_CATEGORY_ICON QDE_BASEDIR+"/share/icons/filesystems/folder.png"
+
+const QSize stdIconSize( 32, 32 );
 
 static QRect adjustToDesktop( const QRect& r ) {
 	QRect desk = QApplication::desktop()->availableGeometry();
@@ -61,9 +63,24 @@ static QRect adjustToDesktop( const QRect& r ) {
 	return ret.normalized();
 }
 
+struct CategoryItem {
+	QIcon icon;
+	QString text;
+	QString exec;
+
+	CategoryItem( const QIcon& _icon, const QString& _text, const QString& _exec ):
+		icon(_icon), text(_text), exec(_exec) { }
+
+	QStandardItem *makeItem() {
+		QStandardItem *item = new QStandardItem( icon, text );
+		item->setData( QVariant(exec), Qt::UserRole );
+		return item;
+	}
+};
+
 struct Category {
-	QList<QListWidgetItem*> itemList;
-	QListWidgetItem *categoryItem;
+	QList<CategoryItem> itemList;
+	QStandardItem *categoryItem;
 
 	Category() {
 		categoryItem = 0l;
@@ -131,25 +148,37 @@ protected:
 		vLayout1->addLayout(hLayout0);
 
 		QWidget *appWidget = new QWidget( this );
-		categoryViewer = new QListWidget( appWidget );
+		categoryViewer = new QListView( appWidget );
+		categoryModel = new QStandardItemModel( this );
+		categoryViewer->setModel( categoryModel );
+		categoryViewer->setIconSize( stdIconSize );
+		categoryViewer->setUniformItemSizes( true );
 
-		connect(categoryViewer, SIGNAL(currentItemChanged(QListWidgetItem*,QListWidgetItem*)),
-			this, SLOT(categoryChange(QListWidgetItem*,QListWidgetItem*)) );
+		connect(categoryViewer->selectionModel(), SIGNAL(currentChanged(const QModelIndex&,const QModelIndex&)),
+			this, SLOT(categoryChange(const QModelIndex&,const QModelIndex&)) );
 
-		itemsViewer = new QListWidget( appWidget );
+		itemsViewer = new QListView( appWidget );
+		itemsModel = new QStandardItemModel( this );
+		itemsViewer->setModel( itemsModel );
+		itemsViewer->setIconSize( stdIconSize );
+		itemsViewer->setUniformItemSizes( true );
 
-		connect(itemsViewer, SIGNAL(itemClicked(QListWidgetItem*)),
-			this, SLOT(executeItem(QListWidgetItem*)) );
+		connect(itemsViewer, SIGNAL(clicked(const QModelIndex&)),
+			this, SLOT(executeItem(const QModelIndex&)) );
 
 		hLayout2 = new QHBoxLayout( appWidget );
 		hLayout2->setContentsMargins( 0,0,0,0 );
 		hLayout2->addWidget(categoryViewer);
 		hLayout2->addWidget(itemsViewer);
 
-		favoritesViewer = new QListWidget( this );
+		favoritesViewer = new QListView( this );
+		favoritesModel = new QStandardItemModel( this );
+		favoritesViewer->setModel( favoritesModel );
+		favoritesViewer->setIconSize( stdIconSize );
+		favoritesViewer->setUniformItemSizes( true );
 
-		connect(favoritesViewer, SIGNAL(itemClicked(QListWidgetItem*)),
-			this, SLOT(executeItem(QListWidgetItem*)) );
+		connect(favoritesViewer, SIGNAL(clicked(const QModelIndex&)),
+			this, SLOT(executeItem(const QModelIndex&)) );
 
 		tab = new QTabWidget( this );
 		tab->setIconSize( QSize(32,32) );
@@ -202,7 +231,12 @@ protected:
 
 	QIcon cached( const QString& filename ) {
 		if ( !iconCache.contains( filename ) )
-			iconCache.insert( filename, new QIcon( filename ) );
+			iconCache.insert( filename, new QIcon(
+				QPixmap( filename ).scaled(
+					stdIconSize,
+					Qt::KeepAspectRatio,
+					Qt::SmoothTransformation
+				) ) );
 		return *iconCache[filename];
 		//return QIcon( filename );
 	}
@@ -226,9 +260,9 @@ protected:
 		QSettings qdesk( filename, QSettings::IniFormat );
 		QStringList categoryNameList = qdesk.value( "category", "unknow" ).toString().split(":");
 		foreach( QString categoryName, categoryNameList ) {
-			QListWidgetItem *item = createItem( qdesk );
+			CategoryItem item = createItem( qdesk );
 			if ( categoryName == "favorites" ) {
-				favoritesViewer->addItem( item );
+				favoritesModel->appendRow( item.makeItem() );
 			} else {
 				Category& category = findOrNewCategory( categoryName );
 				category.itemList.append( item );
@@ -236,22 +270,22 @@ protected:
 		}
 	}
 
-	QListWidgetItem* createItem( QSettings& qdesk ) {
+	CategoryItem createItem( QSettings& qdesk ) {
 		QString text = qdesk.value( "text", DEFAULT_META_TEXT ).toString();
 		QIcon icon( qdesk.value( "icon", DEFAULT_META_ICON ).toString() );
 		QString exec = qdesk.value( "exec", DEFAULT_META_EXEC ).toString();
-		QListWidgetItem *item = new QListWidgetItem( icon, text );
-		item->setData( Qt::UserRole, QVariant(exec) );
+		CategoryItem item( icon, text, exec );
 		return item;
 	}
 
 	Category& findOrNewCategory( const QString& categoryName ) {
 		Category &categoryEntry = categoryList[ categoryName ];
-		if ( !categoryEntry.isValid() )
-			categoryEntry.categoryItem = new QListWidgetItem(
+		if ( !categoryEntry.isValid() ) {
+			categoryEntry.categoryItem = new QStandardItem(
 				cached(DEFAULT_CATEGORY_ICON),
-				categoryName,
-				categoryViewer );
+				categoryName);
+			categoryModel->appendRow( categoryEntry.categoryItem );
+		}
 		return categoryEntry;
 	}
 
@@ -299,12 +333,6 @@ public slots:
 				}
 			break;
 		}
-/*		if ( opacity < 1.0 ) {
-			opacity += 0.18;
-		} else {
-			fadeTimer->stop();
-			opacity = 1.0;
-		}*/
 		setWindowOpacity( opacity );
 	}
 
@@ -328,19 +356,28 @@ public slots:
 	}
 
 private slots:
-	void categoryChange( QListWidgetItem* curr, QListWidgetItem* /*prev*/ ) {
-		QString categoryName = curr->text();
-		QList<QListWidgetItem*> &itemList = categoryList[ categoryName ].itemList;
-		while ( itemsViewer->count() )
-			itemsViewer->takeItem(0);
-		foreach( QListWidgetItem* it, itemList )
-			itemsViewer->addItem( it );
+	void categoryChange( const QModelIndex& index, const QModelIndex& /*old*/ ) {
+		QStandardItem *curr = categoryModel->itemFromIndex( index );
+		if ( curr )  {
+			QString categoryName = curr->text();
+			QList<CategoryItem> &itemList = categoryList[ categoryName ].itemList;
+			itemsModel->clear();
+			foreach( CategoryItem categoryItem, itemList )
+				itemsModel->appendRow( categoryItem.makeItem() );
+		} else
+			qDebug() << "BUG: categoryChange null index";
 	}
 
-	void executeItem( QListWidgetItem* item ) {
-		QString executable = item->data( Qt::UserRole ).toString();
-		qDebug() << "Launching " << executable;
-		QProcess::startDetached( executable );
+	void executeItem( const QModelIndex& index ) {
+		QStandardItem *item = itemsModel->itemFromIndex( index );
+		if ( !item )
+			item = favoritesModel->itemFromIndex( index );
+		if ( item ) {
+			QString executable = item->data( Qt::UserRole ).toString();
+			qDebug() << "Launching " << executable;
+			QProcess::startDetached( executable );
+		} else
+			qDebug() << "BUG: executeItem null index";
 		doHide();
 	}
 
@@ -372,9 +409,15 @@ private:
 	QCache<const QString,QIcon> iconCache;
 	QHash<const QString,Category> categoryList;
 
-	QListWidget *categoryViewer;
-	QListWidget *itemsViewer;
-	QListWidget *favoritesViewer;
+	QListView *categoryViewer;
+	QStandardItemModel *categoryModel;
+
+	QListView *itemsViewer;
+	QStandardItemModel *itemsModel;
+
+	QListView *favoritesViewer;
+	QStandardItemModel *favoritesModel;
+
 	QComboBox *launchEditor;
 
 	QTimer *fadeTimer;

@@ -1,2 +1,2 @@
 TEMPLATE = subdirs
-SUBDIRS = background bottombar
+SUBDIRS = background bottombar style
