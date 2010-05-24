@@ -41,11 +41,11 @@
 #include "../include/plugins.h"
 
 #define QDE_BASEDIR QString(QApplication::applicationDirPath()+"/../")
-#define DEFAULT_META_ICON QDE_BASEDIR+"/share/icons/filesystems/exec.png"
+#define DEFAULT_META_ICON QDE_BASEDIR+"/share/icons/mimetypes/exec.png"
 #define DEFAULT_META_TEXT "..."
 #define DEFAULT_META_EXEC "/bin/true"
 #define DEFAULT_META_TOOLTIP "Unknow"
-#define DEFAULT_CATEGORY_ICON QDE_BASEDIR+"/share/icons/filesystems/folder.png"
+#define DEFAULT_CATEGORY_ICON QDE_BASEDIR+"/share/icons/places/folder.png"
 
 const QSize stdIconSize( 32, 32 );
 
@@ -182,8 +182,8 @@ protected:
 
 		tab = new QTabWidget( this );
 		tab->setIconSize( QSize(32,32) );
-		tab->addTab( favoritesViewer, QIcon( QDE_BASEDIR+"/share/icons/misc.png" ), tr( "Favorites" ) );
-		tab->addTab( appWidget, QIcon( QDE_BASEDIR+"/share/icons/tools.png" ), tr( "Applications" ) );
+		tab->addTab( favoritesViewer, QIcon( ":/favorites.png" ), tr( "Favorites" ) );
+		tab->addTab( appWidget, QIcon( ":/apps.png" ), tr( "Applications" ) );
 
 		tab->setTabPosition( QTabWidget::South );
 
@@ -206,17 +206,17 @@ protected:
 		
 		buttonRestart->setText(tr( "Restart" ));
 		buttonRestart->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
-		buttonRestart->setIcon(QIcon(QDE_BASEDIR+"/share/icons/restart.png"));
+		buttonRestart->setIcon(QIcon(QDE_BASEDIR+"/share/icons/actions/system-restart.png"));
 		buttonRestart->setIconSize( QSize(32,32) );
 
 		buttonShutdown->setText(tr( "Shutdown" ));
 		buttonShutdown->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
-		buttonShutdown->setIcon(QIcon(QDE_BASEDIR+"/share/icons/shutdown.png"));
+		buttonShutdown->setIcon(QIcon(QDE_BASEDIR+"/share/icons/actions/system-shutdown.png"));
 		buttonShutdown->setIconSize( QSize(32,32) );
 
 		buttonLogout->setText(tr( "Logout" ));
 		buttonLogout->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
-		buttonLogout->setIcon(QIcon(QDE_BASEDIR+"/share/icons/stop.png"));
+		buttonLogout->setIcon(QIcon(QDE_BASEDIR+"/share/icons/actions/system-log-out.png"));
 		buttonLogout->setIconSize( QSize(32,32) );
 
 		connect(buttonRestart,SIGNAL(clicked()),

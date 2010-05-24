@@ -1,5 +1,5 @@
 [General]
 category=Internet & networks:favorites
 exec=/opt/QTopia/examples/network/torrent/torrent
-icon=/opt/qde/share/icons/p2p.png
+icon=/opt/qde/share/icons/apps/network-p2p.png
 text=Qt Demo Torrent Client

@@ -41,9 +41,9 @@ public:
 		menu.addSeparator();
 		menu.addMenu( favoritesSubMenu );
 		menu.addSeparator();
-		menu.addAction( QIcon(QDE_BASEDIR+"/share/icons/shutdown.png"), tr("Shutdown"), this, SLOT(halt()) );
-		menu.addAction( QIcon(QDE_BASEDIR+"/share/icons/restart.png"), tr("Restart"), this, SLOT(restart()) );
-		menu.addAction( QIcon(QDE_BASEDIR+"/share/icons/stop.png"), tr("Logout"), this, SLOT(logout()) );
+		menu.addAction( QIcon(QDE_BASEDIR+"/share/icons/actions/system-shutdown.png"), tr("Shutdown"), this, SLOT(halt()) );
+		menu.addAction( QIcon(QDE_BASEDIR+"/share/icons/actions/system-restart.png"), tr("Restart"), this, SLOT(restart()) );
+		menu.addAction( QIcon(QDE_BASEDIR+"/share/icons/actions/system-log-out.png"), tr("Logout"), this, SLOT(logout()) );
 	}
 
 protected:
@@ -116,6 +116,10 @@ private slots:
 			QString executable = action->data().toString();
 			if ( !executable.isEmpty() ) {
 				qDebug() << "Launching " << executable;
+				QByteArray data;
+				QDataStream stream( &data, QIODevice::WriteOnly );
+				stream << executable;
+				//QCopChannel::send( "org.qde.qtroll", "exec", data );
 				QProcess::startDetached( executable );
 			}
 		}

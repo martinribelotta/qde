@@ -1,5 +1,4 @@
 [General]
 category=Internet & networks
 exec=/opt/QTopia/examples/network/ftp/ftp
-icon=/opt/qde/share/icons/ftp.png
 text=FTP Client

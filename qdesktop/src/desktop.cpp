@@ -5,63 +5,55 @@
 #include <QPainter>
 #include <QPaintEvent>
 #include <QLibrary>
-
 #include <QtSvg>
-
 #include <QCopChannel>
-
-#ifdef QDESKTOP_EXPERIMENTAL
-
-#include <QGraphicsScene>
-#include <QGraphicsProxyWidget>
-
-#warning QDESKTOP_EXPERIMENTAL is ***EXPERIMENTAL*** (look it?)
-
-#endif
 
 #include "desktop.h"
 #include "../plugins/include/plugins.h"
 
-QDEsktop::QDEsktop():
-#ifdef QDESKTOP_EXPERIMENTAL
-    QGraphicsView
-#else
-    QWidget
-#endif
-    ( QApplication::desktop() ) {
-	setFixedSize( QApplication::desktop()->width(),
-		QApplication::desktop()->height() );
-#ifdef QDESKTOP_EXPERIMENTAL
-	setScene( new QGraphicsScene( this ) );
-	scene()->setSceneRect( viewport()->geometry() );
-#endif
-	setWindowFlags( Qt::FramelessWindowHint );
+#include "desktop_item.h"
 
-	connect(
-		new QCopChannel( "org.qde.qonfigurator.desktop" ),
-		SIGNAL(received(const QString&,const QByteArray&)),
-		this,
-		SLOT(reconfigure(const QString&,const QByteArray&))
-	);
+QDEsktop::QDEsktop(): QWidget( QApplication::desktop() ) {
+    setFixedSize( QApplication::desktop()->width(),
+        QApplication::desktop()->height() );
+    setWindowFlags( Qt::FramelessWindowHint );
 
-	setAttribute( Qt::WA_NoSystemBackground );
-	setAttribute( Qt::WA_OpaquePaintEvent );
-	loadBackground();
-	loadMoqoids();
+    connect(
+        new QCopChannel( "org.qde.qonfigurator.desktop" ),
+        SIGNAL(received(const QString&,const QByteArray&)),
+        this,
+        SLOT(reconfigure(const QString&,const QByteArray&))
+    );
+
+    setAttribute( Qt::WA_NoSystemBackground );
+    setAttribute( Qt::WA_OpaquePaintEvent );
+    loadBackground();
+    if ( QSettings( "qde", "desktop" ).value( "mocoidable", false ).toBool() )
+        loadMoqoids();
+    else
+        loadFileIcons();
 }
 
 void QDEsktop::showEvent( QShowEvent* /*e*/ ) {
 	lower();
 }
 
+void QDEsktop::mousePressEvent( QMouseEvent* e ) {
+    (void)e;
+    QPoint p = mapToGlobal( e->pos() );
+    QByteArray data;
+    QDataStream stream( &data, QIODevice::WriteOnly );
+    stream << p;
+    QCopChannel::send( "org.qde.plugins.qurumi", "showAt", data );
+}
+
 void QDEsktop::paintEvent( QPaintEvent* e ) {
-#ifdef QDESKTOP_EXPERIMENTAL
-	QGraphicsView::paintEvent( e );
-#else
 	QPainter p( this );
+	p.setRenderHints(QPainter::Antialiasing, true);
+	p.setRenderHints(QPainter::SmoothPixmapTransform, true);
+	p.setRenderHints(QPainter::TextAntialiasing, true);
 	foreach( QRect r, e->region().rects() )
 		p.drawPixmap( r.topLeft(), background, r );
-#endif
 }
 
 void QDEsktop::reconfigure( const QString& /*message*/, const QByteArray& /*data*/ ) {
@@ -77,27 +69,17 @@ void QDEsktop::loadBackground() {
 	QRect deskRect( 0, 0,
 		QApplication::desktop()->width(),
 		QApplication::desktop()->height() );
-#ifdef QDESKTOP_EXPERIMENTAL
-	QPixmap
-#endif
-		background = QPixmap( deskRect.size() );
+	background = QPixmap( deskRect.size() );
 	background.fill( backgroundColor );
 	if ( !backgroundFile.isEmpty() ) {
 		QPainter p( &background );
-		p.setRenderHints(
-			QPainter::Antialiasing|
-			QPainter::SmoothPixmapTransform|
-			QPainter::TextAntialiasing,
-			true
-		);
+		p.setRenderHints(QPainter::Antialiasing, true);
+		p.setRenderHints(QPainter::SmoothPixmapTransform, true);
 		if ( QFileInfo( backgroundFile ).suffix().toLower() == ".svg" )
 			QSvgRenderer( backgroundFile ).render( &p, deskRect );
 		else
 			p.drawPixmap( deskRect, QPixmap( backgroundFile ) );
 	}
-#ifdef QDESKTOP_EXPERIMENTAL
-	setBackgroundBrush( background );
-#endif
 }
 
 static void msg( const QString& key, const QString& text ) {
@@ -124,20 +106,10 @@ void QDEsktop::loadMoqoids() {
 			if ( loader ) {
 				QWidget *w = loader( 0l );
 				if ( w ) {
-#ifdef QDESKTOP_EXPERIMENTAL
-					QDialog *d = new QDialog;
-					d->setWindowTitle( key );
-					QHBoxLayout *l = new QHBoxLayout( d );
-					w->setParent( d );
-					l->addWidget( w );
-					scene()->addWidget( d, Qt::Window );
-					d->show();
-#else
 					w->setParent( this );
 					w->move( r.topLeft() );
 					w->setFixedSize( r.size() );
 					w->show();
-#endif
 				} else
 					msg( key, "Entry point function return null" );
 			} else
@@ -146,4 +118,44 @@ void QDEsktop::loadMoqoids() {
 		} else
 			msg( key, "plugin path key not found" );
 	}
+}
+
+void QDEsktop::loadFileIcons() {
+    QSettings sets( "qde", "desktop" );
+    QStringList deskPath = sets.value( "iconsPath", QDir::homePath()+"/Desktop" ).toString().split(':');
+    foreach( QDEDesktopItem* i, findChildren<QDEDesktopItem*>() ) {
+        delete i;
+    }
+
+    //QList<QDEDesktopItem*> itemList;
+    QPoint p( 10, 10 );
+    int maxw = 0, maxh = 0;
+    foreach( QString s, deskPath ) {
+        QDir dir( s, "*.qdesk" );
+        foreach( QFileInfo fi, dir.entryInfoList( QDir::Files ) ) {
+            QDEDesktopItem *item = new QDEDesktopItem( fi.absoluteFilePath(), this );
+            connect( item, SIGNAL(movedTo(QDEDesktopItem*,const QPoint&)),
+                     this, SLOT(adjustItem(QDEDesktopItem*,const QPoint&)) );
+            itemList.append( item );
+            if ( item->width()>maxw )
+                maxw = item->width();
+            if ( item->height()>maxh )
+                maxh = item->height();
+        }
+    }
+    gridX = maxw+4;
+    gridY = maxh+4;
+    QRect r( 2, 2, maxw+2, maxh+2 );
+    foreach( QDEDesktopItem *item, itemList ) {
+        item->setGeometry( r );
+        r.translate( 0, r.height() );
+        if ( !QApplication::desktop()->availableGeometry().contains( r, true ) ) {
+            r.moveTopLeft( QPoint( 2, r.right() ) );
+        }
+    }
+}
+
+void QDEsktop::adjustItem( QDEDesktopItem* item, const QPoint& p ) {
+    QPoint adjusted = QPoint( 2+(p.x()/gridX)*gridX, 2+(p.y()/gridY)*gridY );
+    item->move( adjusted );
 }

@@ -53,12 +53,13 @@ void QDEStyle::loadStyle() {
 
 QStyle *QDEStyle::getLoadStyle() {
 	QSettings sets( "qde", "desktop" );
-	QString styleName = sets.value( "style", QString() ).toString();
-	if ( styleName.isEmpty() ) styleName = "plastique";
+	if ( !sets.contains( "style" ) )
+		sets.setValue( "style", "plastique" );
+	QString styleName = sets.value( "style" ).toString();
 	QStyle *style = QStyleFactory::create( styleName );
 	if ( !style ) {
 		qDebug() << "FATAL!!!!!: style" << styleName << "can't created";
-		style = QStyleFactory::create( "windows" );
+		style = QStyleFactory::create( "plastique" );
 	}
 	return style;
 }

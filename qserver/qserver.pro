@@ -1,4 +1,4 @@
-HEADERS       = qserver.h
+HEADERS       = qserver.h qserver_p.h
 SOURCES       = qserver.cpp main.cpp
 
 #INCLUDEPATH  += . ./include
